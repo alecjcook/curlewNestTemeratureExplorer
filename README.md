@@ -132,7 +132,7 @@ curlew-explorer/
 
 # Current Status
 
-Version: 0.4 BETA
+Version: 1.0.0
 
 This project is under active development.
 
