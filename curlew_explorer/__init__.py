@@ -1,0 +1,2 @@
+"""Curlew Explorer application package."""
+

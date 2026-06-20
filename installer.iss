@@ -1,7 +1,7 @@
 
 [Setup]
 AppName=Curlew Explorer
-AppVersion=1.0.0
+AppVersion=1.0.3
 AppPublisher=AJC Software
 DefaultDirName={localappdata}\Curlew Explorer
 DefaultGroupName=Curlew Explorer

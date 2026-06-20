@@ -1,4 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
+
+hiddenimports = ['scipy', 'scipy.signal', 'matplotlib']
+hiddenimports += collect_submodules('curlew_explorer')
 
 
 a = Analysis(
@@ -6,7 +10,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('assets/frame0', 'assets/frame0')],
-    hiddenimports=['scipy', 'scipy.signal', 'matplotlib'],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

@@ -12,12 +12,11 @@ from tkinter import (
 )
 
 import tkinter.filedialog
+import tkinter.messagebox as messagebox
 import tkinter as tk
-
+import os
+import traceback
 from pathlib import Path
-import sys
-
-import pandas as pd
 
 from version import VERSION
 
@@ -46,45 +45,54 @@ splash.update()
 # Heavy imports AFTER splash appears
 # ====================================
 
-import curlewExplorer as ce
-from curlewExplorer import CurlewDataRailSingleton
+from curlew_explorer.assets import relative_to_assets
+from curlew_explorer.commands import button_press
+from curlew_explorer.plotting import update_graph
+from curlew_explorer.state import CurlewDataRailSingleton
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-
-
-# Determine the base path for assets
-def get_base_path():
-    if hasattr(sys, '_MEIPASS'):
-        return Path(sys._MEIPASS) / 'assets' / 'frame0'
-    return Path(__file__).parent / 'assets' / 'frame0'
-
-ASSETS_PATH = get_base_path()
-
-def relative_to_assets(path: str) -> Path:
-    return ASSETS_PATH / Path(path)
 
 
 # Next we initiate the Data rail for the application
 dataRail = CurlewDataRailSingleton()
 
 
+def write_error_log(error_text):
+    log_dir = Path(os.getenv("LOCALAPPDATA", Path.home())) / "Curlew Explorer"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "error.log"
+    log_file.write_text(error_text, encoding="utf-8")
+    return log_file
+
+
 # This routing will operate every time a button is pressed
 def guiButtonPress(buttonNumber):
-    # Update data Rail with all UI Data
-    dataRail.filename1 = ambient_entry.get()
-    dataRail.filename2 = nest_entry.get()
+    try:
+        # Update data Rail with all UI Data
+        dataRail.filename1 = ambient_entry.get()
+        dataRail.filename2 = nest_entry.get()
 
-    # Call the Button Press function
-    dataRail.update(ce.buttonPress(buttonNumber, dataRail))
+        # Call the Button Press function
+        dataRail.update(button_press(buttonNumber, dataRail))
 
-    # Update the UI with data from the rail.
-    updateGraph(dataRail)
-    updateUI(dataRail)
+        # Update the UI with data from the rail.
+        updateGraph(dataRail)
+        updateUI(dataRail)
+    except Exception as exc:
+        error_text = traceback.format_exc()
+        log_file = write_error_log(error_text)
+        messagebox.showerror(
+            "Curlew Explorer",
+            f"Something went wrong while loading or displaying the data.\n\n"
+            f"{type(exc).__name__}: {exc}\n\n"
+            f"Error details were saved to:\n{log_file}",
+        )
 
 def mouse_event(event):
-   #print('x: {} and y: {}'.format(event.xdata, event.ydata))
-   # Here we are going to spoof the button press command cause the arcitecture of this program is bad
+   if event.xdata is None:
+       return
+
    dataRail.mouseClick = event.xdata
    guiButtonPress(99)
 
@@ -234,11 +242,18 @@ def updateGraph(dataRail):
         # Redraw the graph
         fig_canvas.draw()
 
+def updateGraph(dataRail):
+    update_graph(dataRail, fig, fig_canvas)
+
+
 # This is the routine that we run when the "load" object is pressed
 # Remember, the load buttons below need the following command
 # lambda: select_path('ambient_entry')
 def select_path(outputObject):
     output_path = tk.filedialog.askopenfile(mode='r', filetypes=(('csv files', '*.csv'), ('All files', '*.*')))
+    if output_path is None:
+        return
+
     if outputObject == "ambient_entry":
         ambient_entry.delete(0, tk.END)
         ambient_entry.insert(0, output_path.name)

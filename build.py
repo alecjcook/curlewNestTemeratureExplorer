@@ -1,6 +1,26 @@
 import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+
+def find_inno_setup():
+    iscc_path = shutil.which("ISCC.exe") or shutil.which("ISCC")
+    if iscc_path:
+        return iscc_path
+
+    candidates = [
+        Path(r"C:\Program Files (x86)\Inno Setup 7\ISCC.exe"),
+        Path(r"C:\Program Files\Inno Setup 7\ISCC.exe"),
+        Path(r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe"),
+        Path(r"C:\Program Files\Inno Setup 6\ISCC.exe"),
+    ]
+
+    for candidate in candidates:
+        if candidate.exists():
+            return str(candidate)
+
+    return None
 
 # ====================================
 # Load version
@@ -60,7 +80,7 @@ Source: "dist\\CurlewExplorer\\*"; DestDir: "{{app}}"; Flags: ignoreversion recu
 
 [Icons]
 Name: "{{group}}\\Curlew Explorer"; Filename: "{{app}}\\CurlewExplorer.exe"
-Name: "{{commondesktop}}\\Curlew Explorer"; Filename: "{{app}}\\CurlewExplorer.exe"
+Name: "{{userdesktop}}\\Curlew Explorer"; Filename: "{{app}}\\CurlewExplorer.exe"
 
 [Run]
 Filename: "{{app}}\\CurlewExplorer.exe"; Description: "Launch Curlew Explorer"; Flags: nowait postinstall skipifsilent
@@ -76,7 +96,9 @@ with open("installer.iss", "w") as f:
 print("\nBuilding executable...")
 
 pyinstaller_command = [
-    "pyinstaller",
+    sys.executable,
+    "-m",
+    "PyInstaller",
     "--noconsole",
     "--onedir",
     "--noupx",
@@ -86,6 +108,7 @@ pyinstaller_command = [
     "--hidden-import", "scipy",
     "--hidden-import", "scipy.signal",
     "--hidden-import", "matplotlib",
+    "--collect-submodules", "curlew_explorer",
     "--add-data", "assets/frame0;assets/frame0",
     "gui.py"
 ]
@@ -102,7 +125,15 @@ if result.returncode != 0:
 
 print("\nBuilding installer...")
 
-inno_setup = r"C:\Program Files (x86)\Inno Setup 7\ISCC.exe"
+inno_setup = find_inno_setup()
+
+if inno_setup is None:
+    print("\nInno Setup compiler was not found.")
+    print("The executable build succeeded, but the installer could not be created.")
+    print("Install Inno Setup 6 or 7, or add ISCC.exe to your PATH, then run build.py again.")
+    print("\nExecutable:")
+    print("dist/CurlewExplorer/")
+    exit(1)
 
 result = subprocess.run([
     inno_setup,
